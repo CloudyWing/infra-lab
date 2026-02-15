@@ -1,0 +1,109 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: elasticsearch
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${COMMON_PASSWORD}
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.license.self_generated.type=${LICENSE}
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m -Xlog:gc:stdout:time,level,tags
+    volumes:
+      - ./volumes/elasticsearch/data:/usr/share/elasticsearch/data
+    secrets:
+      - elastic_password
+    networks:
+      - shared_net
+    ports:
+      - "${ES_PORT}:9200"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:$$(cat /run/secrets/elastic_password) http://127.0.0.1:9200/_cluster/health | grep -qE 'yellow|green'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
+    container_name: kibana
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${COMMON_PASSWORD}
+    secrets:
+      - kibana_password
+    networks:
+      - shared_net
+    ports:
+      - "${KIBANA_PORT}:5601"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -I http://127.0.0.1:5601 | grep -q 'HTTP/1.1 302 Found'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: elastic_setup
+    user: "0"
+    networks:
+      - shared_net
+    secrets:
+      - elastic_password
+      - kibana_password
+    command: >
+      bash -c '
+        echo "Waiting for Elasticsearch...";
+        until curl -s -u elastic:$(cat /run/secrets/elastic_password) http://elasticsearch:9200/_cluster/health?pretty | grep -qE "yellow|green"; do
+          echo "Elasticsearch is unavailable - sleeping";
+          sleep 10;
+        done;
+        echo "Setting kibana_system password...";
+        curl -s -X POST -u elastic:$(cat /run/secrets/elastic_password) -H "Content-Type: application/json"           http://elasticsearch:9200/_security/user/kibana_system/_password           -d "{\"password\":\"$(cat /run/secrets/kibana_password)\"}";
+        echo "Done!";
+      '
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net
+
+secrets:
+  elastic_password:
+    file: ../../secrets/common_password.txt
+  kibana_password:
+    file: ../../secrets/common_password.txt

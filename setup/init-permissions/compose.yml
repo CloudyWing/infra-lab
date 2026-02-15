@@ -1,0 +1,41 @@
+services:
+  init-permissions:
+    image: alpine:${INIT_PERMISSIONS_TAG}
+    container_name: init-permissions
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+    volumes:
+      - ../../datastores/sqlserver/volumes:/target/sqlserver
+      - ../../messaging/mosquitto/volumes:/target/mosquitto
+      - ../../messaging/rabbitmq/volumes:/target/rabbitmq
+      - ../../observability/seq/volumes:/target/seq
+    command: >
+      sh -c "
+        echo 'Fixing SQL Server (10001:0)...' &&
+        chown -R 10001:0 /target/sqlserver &&
+        chmod -R u+rwX,g+rwX,o+rX /target/sqlserver &&
+        echo 'Fixing Mosquitto data/log (1883:1883)...' &&
+        chown -R 1883:1883 /target/mosquitto/data /target/mosquitto/log &&
+        chmod -R u+rwX,g+rwX,o-rwx /target/mosquitto/data /target/mosquitto/log &&
+        chmod 700 /target/mosquitto/data/mosquitto.db 2>/dev/null || true &&
+        echo 'Fixing RabbitMQ data/log (999:999)...' &&
+        chown -R 999:999 /target/rabbitmq/data /target/rabbitmq/log &&
+        chmod -R u+rwX,g+rwX,o-rwx /target/rabbitmq/data /target/rabbitmq/log &&
+        chmod 600 /target/rabbitmq/data/.erlang.cookie 2>/dev/null || true &&
+        echo 'Fixing Seq (1001:1001)...' &&
+        chown -R 1001:1001 /target/seq &&
+        chmod -R u+rwX,g+rwX,o+rX /target/seq &&
+        echo 'Permission fix complete.'
+      "
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

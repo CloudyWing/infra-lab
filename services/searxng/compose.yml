@@ -1,0 +1,20 @@
+services:
+  searxng:
+    image: searxng/searxng:${SEARXNG_TAG}
+    container_name: searxng
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    networks:
+      - shared_net
+    ports:
+      - "${SEARXNG_PORT}:8080"
+    volumes:
+      - ./volumes/searxng:/etc/searxng
+    tmpfs:
+      - /var/cache/searxng
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

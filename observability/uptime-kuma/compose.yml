@@ -1,0 +1,21 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:${UPTIME_KUMA_TAG}
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - uptime-kuma-data:/app/data
+    ports:
+      - "${UPTIME_KUMA_PORT}:3001"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - shared_net
+
+volumes:
+  uptime-kuma-data:
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

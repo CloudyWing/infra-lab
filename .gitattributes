@@ -1,0 +1,16 @@
+# Default to LF for all text files
+* text=auto eol=lf
+
+# Explicitly declare text files to ensure they are normalized
+*.sh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.conf text eol=lf
+*.txt text eol=lf
+*.sql text eol=lf
+
+# Ensure environment files use LF
+.env text eol=lf
+.env.* text eol=lf

@@ -1,0 +1,77 @@
+services:
+  redis:
+    image: redis:${REDIS_TAG}
+    container_name: redis
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    networks:
+      - shared_net
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - ./volumes/data:/data
+    secrets:
+      - redis_password
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    command: >
+      sh -c 'redis-server --requirepass "$(cat /run/secrets/redis_password)"'
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  redisinsight:
+    image: redis/redisinsight:${REDIS_INSIGHT_TAG}
+    container_name: redisinsight
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    networks:
+      - shared_net
+    ports:
+      - "${REDIS_INSIGHT_PORT}:5540"
+    volumes:
+      - ./volumes/insight:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://127.0.0.1:5540"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  redis-exporter:
+    image: oliver006/redis_exporter:${REDIS_EXPORTER_TAG}
+    container_name: redis-exporter
+    environment:
+      - REDIS_PASSWORD=${COMMON_PASSWORD}
+    command: ["--redis.addr=redis:6379"]
+    entrypoint:
+      - /redis_exporter
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    networks:
+      - shared_net
+    ports:
+      - "${REDIS_EXPORTER_PORT}:9121"
+    secrets:
+      - redis_password
+    depends_on:
+      - redis
+
+
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net
+
+secrets:
+  redis_password:
+    file: ../../secrets/common_password.txt

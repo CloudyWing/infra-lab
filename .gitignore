@@ -1,0 +1,29 @@
+# Environment files with sensitive data
+.env
+
+# Docker volumes
+**/volumes/
+
+# Secrets
+secrets/
+
+# Windows Zone.Identifier
+*:Zone.Identifier
+
+# Backups
+backups/
+
+# Logs
+logs/
+
+# IDE & Editor
+.vscode/
+.idea/
+.powershell/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/

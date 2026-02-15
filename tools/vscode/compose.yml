@@ -1,0 +1,18 @@
+services:
+  vscode-editor:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+    container_name: vscode-editor
+    hostname: dev-box
+    command: sleep infinity
+    user: root
+    restart: unless-stopped
+    networks:
+      - shared_net
+    volumes:
+      - ../../:/workspace
+    working_dir: /workspace
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

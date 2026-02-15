@@ -1,0 +1,25 @@
+services:
+  seq:
+    image: datalust/seq:${SEQ_TAG}
+    container_name: seq
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${COMMON_PASSWORD}
+    volumes:
+      - ./volumes/data:/data
+    networks:
+      - shared_net
+    ports:
+      - "${SEQ_WEB_PORT}:80"
+      - "${SEQ_INGEST_PORT}:5341"
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

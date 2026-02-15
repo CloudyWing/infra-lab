@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+umask 077
+PASSWD_FILE=/mosquitto/config/passwd
+if [ -f /run/secrets/mq_password ]; then
+    MOSQUITTO_PASSWORD=$(cat /run/secrets/mq_password)
+fi
+touch "$PASSWD_FILE"
+if [ -n "$MOSQUITTO_PASSWORD" ]; then
+    mosquitto_passwd -b "$PASSWD_FILE" admin "$MOSQUITTO_PASSWORD"
+fi
+chown 1883:1883 "$PASSWD_FILE" 2>/dev/null || true
+chmod 600 "$PASSWD_FILE"
+if [ -f /mosquitto/data/mosquitto.db ]; then
+    chown 1883:1883 /mosquitto/data/mosquitto.db 2>/dev/null || true
+    chmod 600 /mosquitto/data/mosquitto.db || true
+fi
+exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf

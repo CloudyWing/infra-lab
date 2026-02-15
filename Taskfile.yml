@@ -1,0 +1,175 @@
+version: "3"
+
+vars:
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  init:
+    desc: Initialize environment (create dirs, secrets)
+    cmds:
+      - bash scripts/init.sh
+
+  up:
+    desc: Start all services (or specific SERVICE)
+    vars:
+      SERVICE: '{{.SERVICE | default .S | default ""}}'
+    cmds:
+      - cmd: |
+          if [ -n "{{.SERVICE}}" ]; then
+            echo "[INFO] Starting service: {{.SERVICE}}..."
+            docker compose up -d {{.SERVICE}}
+          else
+            echo "[INFO] Starting all services..."
+            docker compose up -d
+          fi
+        platforms: [linux, darwin]
+      - cmd: |
+          if ('{{.SERVICE}}' -ne '') {
+            Write-Host "[INFO] Starting service: {{.SERVICE}}..."
+            docker compose up -d {{.SERVICE}}
+          } else {
+            Write-Host "[INFO] Starting all services..."
+            docker compose up -d
+          }
+        platforms: [windows]
+
+  down:
+    desc: Stop all services (or specific SERVICE)
+    vars:
+      SERVICE: '{{.SERVICE | default .S | default ""}}'
+    cmds:
+      - cmd: |
+          if [ -n "{{.SERVICE}}" ]; then
+            echo "[INFO] Stopping service: {{.SERVICE}}..."
+            docker compose stop {{.SERVICE}}
+          else
+            echo "[INFO] Stopping all services..."
+            docker compose down
+          fi
+        platforms: [linux, darwin]
+      - cmd: |
+          if ('{{.SERVICE}}' -ne '') {
+            Write-Host "[INFO] Stopping service: {{.SERVICE}}..."
+            docker compose stop {{.SERVICE}}
+          } else {
+            Write-Host "[INFO] Stopping all services..."
+            docker compose down
+          }
+        platforms: [windows]
+
+  restart:
+    desc: Restart all services (or specific SERVICE)
+    vars:
+      SERVICE: '{{.SERVICE | default .S | default ""}}'
+    cmds:
+      - cmd: |
+          if [ -n "{{.SERVICE}}" ]; then
+            echo "[INFO] Restarting service: {{.SERVICE}}..."
+            docker compose restart {{.SERVICE}}
+          else
+            echo "[INFO] Restarting all services..."
+            task down
+            task up
+          fi
+        platforms: [linux, darwin]
+      - cmd: |
+          if ('{{.SERVICE}}' -ne '') {
+            Write-Host "[INFO] Restarting service: {{.SERVICE}}..."
+            docker compose restart {{.SERVICE}}
+          } else {
+            Write-Host "[INFO] Restarting all services..."
+            task down
+            task up
+          }
+        platforms: [windows]
+
+  ps:
+    desc: View service status (or specific SERVICE)
+    vars:
+      SERVICE: '{{.SERVICE | default .S | default ""}}'
+    cmds:
+      - cmd: |
+          if [ -n "{{.SERVICE}}" ]; then
+            echo "[INFO] Checking service health: {{.SERVICE}}..."
+            docker compose ps {{.SERVICE}}
+          else
+            echo "[INFO] Checking service health..."
+            docker compose ps
+          fi
+        platforms: [linux, darwin]
+      - cmd: |
+          if ('{{.SERVICE}}' -ne '') {
+            Write-Host "[INFO] Checking service health: {{.SERVICE}}..."
+            docker compose ps {{.SERVICE}}
+          } else {
+            Write-Host "[INFO] Checking service health..."
+            docker compose ps
+          }
+        platforms: [windows]
+      - echo ""
+      - cmd: echo "[INFO] Uptime Kuma http://localhost:3001"
+
+  compose-logs:
+    desc: View Docker compose logs (or specific SERVICE)
+    vars:
+      SERVICE: '{{.SERVICE | default .S | default ""}}'
+    cmds:
+      - |
+        if [ -n "{{.SERVICE}}" ]; then
+          docker compose logs -f {{.SERVICE}}
+        else
+          echo "[INFO] Dozzle Log Viewer: http://localhost:8280"
+          docker compose logs -f
+        fi
+
+  backup:
+    desc: Run full backup (SQL/Redis Dump + Volume Tarball)
+    cmds:
+      - bash scripts/backup.sh
+
+  clean-script-logs:
+    desc: Clean script logs (all, or older than DAYS)
+    vars:
+      DAYS: '{{.DAYS | default .D | default ""}}'
+    cmds:
+      - |
+        if [ -n "{{.DAYS}}" ]; then
+          bash scripts/cleanup.sh logs {{.DAYS}}
+        else
+          bash scripts/cleanup.sh logs
+        fi
+
+  clean:
+    desc: Remove containers and networks (Keep data)
+    cmds:
+      - bash scripts/cleanup.sh containers
+
+  purge:
+    desc: Remove EVERYTHING (containers, networks, data)
+    prompt: "Are you sure you want to DESTROY all data?"
+    cmds:
+      - bash scripts/cleanup.sh purge
+
+  doctor:
+    desc: Validate environment, compose paths, and permissions
+    cmds:
+      - bash scripts/doctor.sh
+
+  doctor-fix:
+    desc: Validate and auto-fix writable permission issues
+    cmds:
+      - bash scripts/doctor.sh --fix
+
+  smoke:
+    desc: Run end-to-end smoke test (init/up/ps/backup/down/doctor-fix/doctor)
+    cmds:
+      - task: init
+      - task: up
+      - task: ps
+      - task: backup
+      - task: down
+      - task: doctor-fix
+      - task: doctor

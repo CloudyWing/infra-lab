@@ -1,0 +1,24 @@
+services:
+  mailpit:
+    image: axllent/mailpit:${MAILPIT_TAG}
+    container_name: mailpit
+    extends:
+      file: ../../policies/base.yml
+      service: default-policy
+    networks:
+      - shared_net
+    ports:
+      - "${MAILPIT_WEB_PORT}:8025"
+      - "${MAILPIT_SMTP_PORT}:1025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

@@ -1,0 +1,47 @@
+name: ${COMPOSE_PROJECT_NAME}
+
+include:
+  # Setup - Foundations
+  - path: setup/init-permissions/compose.yml
+    env_file: .env
+
+  # Observability
+  - path: observability/seq/compose.yml
+    env_file: .env
+  - path: observability/uptime-kuma/compose.yml
+    env_file: .env
+  - path: observability/dozzle/compose.yml
+    env_file: .env
+
+  # Datastores
+  - path: datastores/sqlserver/compose.yml
+    env_file: .env
+  - path: datastores/elastic/compose.yml
+    env_file: .env
+  - path: datastores/redis/compose.yml
+    env_file: .env
+  - path: datastores/azurite/compose.yml
+    env_file: .env
+
+  # Messaging
+  - path: messaging/mosquitto/compose.yml
+    env_file: .env
+  - path: messaging/rabbitmq/compose.yml
+    env_file: .env
+
+  # Services
+  - path: services/keycloak/compose.yml
+    env_file: .env
+  - path: services/searxng/compose.yml
+    env_file: .env
+
+  # Dev Utilities
+  - path: tools/mailpit/compose.yml
+    env_file: .env
+  - path: tools/vscode/compose.yml
+    env_file: .env
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net

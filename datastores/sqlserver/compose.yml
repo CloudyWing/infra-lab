@@ -1,0 +1,42 @@
+services:
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:${MSSQL_TAG}
+    container_name: sql-server
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cap_add:
+      - SYS_PTRACE
+    networks:
+      - shared_net
+    ports:
+      - "${MSSQL_PORT}:1433"
+    volumes:
+      - ./volumes/data:/var/opt/mssql/data
+      - ./volumes/log:/var/opt/mssql/log
+      - ./volumes/backup:/var/opt/mssql/backup
+    environment:
+      - ACCEPT_EULA=Y
+      - TZ=${TZ}
+      - MSSQL_SA_PASSWORD=${COMMON_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S 127.0.0.1 -U sa -P ${COMMON_PASSWORD} -C -Q 'SELECT 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  shared_net:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME}_shared_net
