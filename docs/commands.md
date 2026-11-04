@@ -109,6 +109,7 @@ task lab:stop
 - `memswap_limit` 與 Memory Limit 相同，記憶體不足時會被 OOM Kill，而不是改用 Swap 默默變慢。
 - WSL2 預設只分配主機 50% 的記憶體給 Docker。若 `task lab:mem` 顯示總額超過 Docker 可用記憶體，請調高 `%UserProfile%\.wslconfig` 的 `memory=`，或降低 `.env` 的數值。
 - `task doctor` 會檢查全部服務的 Limit 總額是否超過 Docker 可用記憶體。
+- RabbitMQ 在容器內不一定偵測得到記憶體限制，`task init` 會把 `RABBITMQ_MEM_LIMIT` 寫入 `rabbitmq.conf`。修改此值後需重新執行 `task init` 並重啟 RabbitMQ，`task doctor` 會檢查兩者是否一致。
 
 ### 5.1 預設值依據
 

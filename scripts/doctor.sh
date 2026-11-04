@@ -306,6 +306,19 @@ if [ -f ".env" ] && docker ps >/dev/null 2>&1; then
     fi
 fi
 
+# RabbitMQ 的記憶體設定在 task init 時寫入 rabbitmq.conf，修改 .env 後需重新產生
+rabbitmq_conf="messaging/rabbitmq/volumes/config/rabbitmq.conf"
+if [ -f ".env" ] && [ -f "$rabbitmq_conf" ]; then
+    env_limit="$(grep -E '^RABBITMQ_MEM_LIMIT=' .env | tail -1 | cut -d= -f2- | tr -d '"\r')"
+    env_limit="${env_limit:-512M}"
+    conf_limit="$(grep -E '^total_memory_available_override_value' "$rabbitmq_conf" | awk -F'= *' '{print $2}' | tr -d '\r')"
+    if [ "$conf_limit" = "$env_limit" ]; then
+        pass "RabbitMQ memory override matches RABBITMQ_MEM_LIMIT ($env_limit)"
+    else
+        warn "RabbitMQ memory override (${conf_limit:-missing}) differs from RABBITMQ_MEM_LIMIT ($env_limit). Run: task init && task restart S=rabbitmq"
+    fi
+fi
+
 # 對外 Port 綁定位址
 if [ -f ".env" ]; then
     bind_addr="$(grep -E '^BIND_ADDR=' .env | tail -1 | cut -d= -f2- | tr -d '"\r')"

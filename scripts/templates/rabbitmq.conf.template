@@ -1,2 +1,5 @@
 default_user = admin
 default_pass = ${COMMON_PASSWORD}
+
+# 容器內不一定偵測得到 cgroup 記憶體限制；由 task init 依 .env 的 RABBITMQ_MEM_LIMIT 產生
+total_memory_available_override_value = ${RABBITMQ_MEM_LIMIT}

@@ -59,7 +59,7 @@ render_template() {
     fi
 
     log_warn "envsubst not found, fallback render: $template_file"
-    if perl -pe 's/\$\{COMMON_PASSWORD\}/$ENV{COMMON_PASSWORD}/g' "$template_file" > "$target_file"; then
+    if perl -pe 's/\$\{(COMMON_PASSWORD|RABBITMQ_MEM_LIMIT)\}/$ENV{$1}/g' "$template_file" > "$target_file"; then
         if grep -q '\${[A-Za-z_][A-Za-z0-9_]*}' "$target_file"; then
             log_warn "Template has unresolved variables: $target_file"
             return 1
@@ -196,7 +196,9 @@ if [ -d "$RABBITMQ_CONF" ]; then
 fi
 
 export COMMON_PASSWORD="$FINAL_PASS"
-if render_template "$RABBITMQ_CONF_TEMPLATE" "$RABBITMQ_CONF" '${COMMON_PASSWORD}'; then
+# RabbitMQ 在容器內不一定偵測得到 cgroup 記憶體限制，需與 Compose 的 Memory Limit 一致
+export RABBITMQ_MEM_LIMIT="${RABBITMQ_MEM_LIMIT:-512M}"
+if render_template "$RABBITMQ_CONF_TEMPLATE" "$RABBITMQ_CONF" '${COMMON_PASSWORD} ${RABBITMQ_MEM_LIMIT}'; then
     log_ok "RabbitMQ config rendered from template."
 else
     log_warn "Cannot write RabbitMQ config: $RABBITMQ_CONF"
