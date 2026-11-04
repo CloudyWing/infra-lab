@@ -10,6 +10,7 @@
 | 指令 | 功能 | 說明 |
 | --- | --- | --- |
 | `task init` | **初始化環境 (Initialize Environment)** | 建立目錄、網路與機密檔案。**請最先執行此指令。** |
+| `task bootstrap` | **新電腦佈置 (Bootstrap)** | 依序執行 `init`、`doctor`、`mcp:build`、`mcp:config`，不啟動任何服務；見 [MCP Server](mcp.md#6-新電腦佈置)。 |
 | `task up` | **啟動服務 (Start Services)** | 啟動所有定義的服務。可指定 `SERVICE=name`（或 `S=name`）啟動特定服務。 |
 | `task down` | **停止服務 (Stop Services)** | 停止全部服務；可指定 `SERVICE=name`（或 `S=name`）僅停止單一服務。 |
 | `task restart` | **重啟服務 (Restart Services)** | 重啟全部服務；可指定 `SERVICE=name`（或 `S=name`）僅重啟單一服務。 |
@@ -36,7 +37,8 @@
 | `task stats` | **資源使用量 (Resource Usage)** | 顯示本專案容器目前的 CPU 與記憶體用量。 |
 | `task validate` | **設定驗證 (Validate)** | 驗證解析後的 Compose 設定；需先執行 `task init`。 |
 | `task lab:verify` | **綜合驗證 (Verify)** | 依序執行 `validate`、`doctor`、`ps-all`、`stats`。 |
-| `task mcp:build` | **建置 MCP Server** | 建置 `tools/mcp/InfraLab.Mcp`，需要 .NET 10 SDK；用法見 [MCP Server](mcp.md)。 |
+| `task mcp:build` | **建置 MCP Server** | 在 .NET SDK 容器中發布 `tools/mcp/InfraLab.Mcp`，主機只需要 Docker；用法見 [MCP Server](mcp.md)。 |
+| `task mcp:config` | **MCP Client 設定** | 依目前機器的 distro 與 repo 路徑，輸出 Claude Code、Claude Desktop 的設定。 |
 | `task` / `task --list` | **查看指令清單 (List Tasks)** | 列出所有可用指令。 |
 
 ## 4. 按需啟停 (Service Groups & Modes)

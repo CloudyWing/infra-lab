@@ -30,44 +30,76 @@
 
 ## 3. 建置
 
-需要 .NET 10 SDK，在 WSL（或 Linux / macOS）中執行：
+在 WSL（或 Linux / macOS）中執行：
 
 ```bash
 task mcp:build
 ```
 
+建置在 `mcr.microsoft.com/dotnet/sdk` 容器中進行，主機只需要 Docker，不需要安裝 .NET SDK。產出的 self-contained 執行檔位於 `tools/mcp/publish/InfraLab.Mcp`，執行時也不需要 .NET Runtime。
+
+- SDK 映像的 Tag 由 `.env` 的 `DOTNET_SDK_TAG` 指定，預設為 `10.0`。
+- NuGet 套件快取在 `tools/mcp/.nuget`，重複建置不必重新下載。
+- 依 `uname -m` 選擇 `linux-x64` 或 `linux-arm64`。
+
 ## 4. 設定 Client
 
 MCP Server 必須在能執行 `docker`、`bash` 與 `scripts/lab.sh` 的環境中執行，也就是 infra-lab 所在的 WSL。
 
-### 4.1 Claude Code（在 WSL 中執行）
+所有 Client 都透過 `scripts/mcp.sh` 啟動 Server。腳本依自身位置推算 repo 根目錄，再以 `--root` 傳給 Server，因此 repo 路徑只需要在 Client 設定中出現一次，執行檔位置與 TargetFramework 都不寫進 Client 設定。
 
-repo 根目錄已附 `.mcp.json`，在 infra-lab 目錄啟動 Claude Code 時會詢問是否啟用 `infra-lab` MCP Server。需先執行 `task mcp:build`。
+### 4.1 產生設定
 
-### 4.2 Claude Desktop（Windows）
+```bash
+task mcp:config
+```
 
-Claude Desktop 在 Windows 執行，需透過 `wsl.exe` 啟動 WSL 中的 Server。編輯 `claude_desktop_config.json`，將路徑換成你的 infra-lab 位置：
+依目前機器的 WSL distro（`$WSL_DISTRO_NAME`）與 repo 路徑，輸出下列各 Client 的設定。換電腦或搬移 repo 後重新執行即可。repo 路徑含雙引號或反斜線時，產生的設定無法正確表達該路徑，`task mcp:config` 會直接報錯並結束，請將 repo 放在不含這兩種字元的目錄。
+
+### 4.2 Claude Code（在 WSL 中執行）
+
+repo 根目錄已附 `.mcp.json`，內容為 `bash scripts/mcp.sh`，在 infra-lab 目錄啟動 Claude Code 時會詢問是否啟用 `infra-lab` MCP Server。
+
+### 4.3 Claude Code（Windows）
+
+執行 `task mcp:config` 輸出的 `claude mcp add` 指令，格式如下：
+
+```bash
+claude mcp add infra-lab --scope user -- wsl.exe -d <distro> -e bash <repo>/scripts/mcp.sh
+```
+
+### 4.4 Claude Desktop（Windows）
+
+將 `task mcp:config` 輸出的 JSON 加入 `claude_desktop_config.json`，格式如下：
 
 ```json
 {
   "mcpServers": {
     "infra-lab": {
       "command": "wsl.exe",
-      "args": [
-        "-e", "bash", "-lc",
-        "cd ~/infra-lab && dotnet tools/mcp/InfraLab.Mcp/bin/Release/net10.0/InfraLab.Mcp.dll"
-      ]
+      "args": ["-d", "<distro>", "-e", "bash", "<repo>/scripts/mcp.sh"]
     }
   }
 }
 ```
 
-> `bash -lc` 會載入 Login Shell 的 `PATH`，讓 `dotnet`、`docker` 可以被找到。
+- `-d <distro>` 指定 infra-lab 所在的 distro。主機有多個 distro 時，省略會進入預設 distro。
+- `-e` 不經過 Login Shell，執行檔是 self-contained，不依賴 `PATH` 中的 `dotnet`。
 
 ## 5. 專案根目錄
 
 Server 依下列順序決定 infra-lab 根目錄，找不到 `compose.yml` 或 `scripts/lab.sh` 時會直接結束：
 
-1. `--root <path>` 參數
+1. `--root <path>` 參數，`scripts/mcp.sh` 一律以這個方式傳入
 2. `INFRA_LAB_ROOT` 環境變數
 3. 目前目錄
+
+## 6. 新電腦佈置
+
+```bash
+git clone https://github.com/CloudyWing/infra-lab.git
+cd infra-lab
+task bootstrap
+```
+
+`task bootstrap` 依序執行 `init`、`doctor`、`mcp:build`、`mcp:config`，結束時不啟動任何服務。之後依需要以 `task lab:*` 啟動群組，或由 MCP Client 呼叫 `lab_up`、`lab_start_mode` 啟動。

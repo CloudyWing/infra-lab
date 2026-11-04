@@ -41,6 +41,8 @@ task init
 
 ```
 
+> 新電腦可改用 `task bootstrap`，一次完成初始化、健檢、MCP Server 建置與 Client 設定輸出，且不啟動任何服務。詳見 `docs/mcp.md`。
+
 ### 2. 啟動服務 (Start Services)
 
 啟動所有定義在 stack 中的服務：

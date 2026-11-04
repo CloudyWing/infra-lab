@@ -12,6 +12,17 @@ tasks:
     cmds:
       - bash scripts/init.sh
 
+  # 新電腦一次完成佈置；刻意不啟動服務，之後由 task lab:* 或 MCP 依需要啟動
+  bootstrap:
+    desc: Set up a new machine (init, doctor, build MCP, print MCP settings) without starting services
+    cmds:
+      - task: init
+      - task: doctor
+      - task: mcp:build
+      - task: mcp:config
+      - echo ""
+      - echo "[DONE] Bootstrap complete. No services were started; use 'task lab:list' to pick groups, or let an MCP client start them."
+
   # Task 在所有平台 (含 Windows) 都以內建的 sh 直譯器執行 cmds，
   # 因此只保留一份 POSIX sh 寫法，不另寫 PowerShell 分支。
   up:
@@ -158,9 +169,14 @@ tasks:
         fi
 
   mcp:build:
-    desc: Build the infra-lab MCP server (requires .NET 10 SDK)
+    desc: Build the infra-lab MCP server in a .NET SDK container (only Docker required)
     cmds:
-      - dotnet build tools/mcp/InfraLab.Mcp -c Release -v q
+      - bash scripts/mcp.sh build
+
+  mcp:config:
+    desc: Print MCP client settings (distro and paths) for this machine
+    cmds:
+      - bash scripts/mcp.sh config
 
   lab:verify:
     desc: Validate configuration and show runtime status and resource usage

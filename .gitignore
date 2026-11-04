@@ -31,3 +31,5 @@ tmp/
 # .NET build output
 bin/
 obj/
+tools/mcp/publish/
+tools/mcp/.nuget/
