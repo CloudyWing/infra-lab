@@ -36,6 +36,7 @@
 | `task stats` | **資源使用量 (Resource Usage)** | 顯示本專案容器目前的 CPU 與記憶體用量。 |
 | `task validate` | **設定驗證 (Validate)** | 驗證解析後的 Compose 設定；需先執行 `task init`。 |
 | `task lab:verify` | **綜合驗證 (Verify)** | 依序執行 `validate`、`doctor`、`ps-all`、`stats`。 |
+| `task mcp:build` | **建置 MCP Server** | 建置 `tools/mcp/InfraLab.Mcp`，需要 .NET 10 SDK；用法見 [MCP Server](mcp.md)。 |
 | `task` / `task --list` | **查看指令清單 (List Tasks)** | 列出所有可用指令。 |
 
 ## 4. 按需啟停 (Service Groups & Modes)

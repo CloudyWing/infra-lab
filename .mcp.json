@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "infra-lab": {
+      "command": "dotnet",
+      "args": ["tools/mcp/InfraLab.Mcp/bin/Release/net10.0/InfraLab.Mcp.dll", "--root", "."]
+    }
+  }
+}

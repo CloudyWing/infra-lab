@@ -157,6 +157,11 @@ tasks:
           bash scripts/lab.sh mem {{.G}}
         fi
 
+  mcp:build:
+    desc: Build the infra-lab MCP server (requires .NET 10 SDK)
+    cmds:
+      - dotnet build tools/mcp/InfraLab.Mcp -c Release -v q
+
   lab:verify:
     desc: Validate configuration and show runtime status and resource usage
     cmds:

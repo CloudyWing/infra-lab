@@ -27,3 +27,7 @@ Thumbs.db
 
 # Temporary
 tmp/
+
+# .NET build output
+bin/
+obj/
