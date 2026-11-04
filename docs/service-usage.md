@@ -92,7 +92,7 @@
 ### Uptime Kuma / Seq
 
 - Uptime Kuma 首次需在 UI 建立自己的管理帳號。
-- Seq 首次管理員密碼由 `SEQ_FIRSTRUN_ADMINPASSWORD=${COMMON_PASSWORD}` 設定。
+- Seq 首次管理員密碼由 `SEQ_FIRSTRUN_ADMINPASSWORD=${COMMON_PASSWORD}` 設定。首次登入時 Seq 會要求變更密碼，之後以新密碼登入。
 
 ## 4. 帳密與安全建議
 
