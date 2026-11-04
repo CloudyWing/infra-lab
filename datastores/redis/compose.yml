@@ -2,25 +2,28 @@ services:
   redis:
     image: redis:${REDIS_TAG}
     container_name: redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${REDIS_MEM_LIMIT:-128M}
+    memswap_limit: ${REDIS_MEM_LIMIT:-128M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     networks:
       - shared_net
     ports:
-      - "${REDIS_PORT}:6379"
+      - "${BIND_ADDR:-127.0.0.1}:${REDIS_PORT}:6379"
     volumes:
       - ./volumes/data:/data
     secrets:
       - redis_password
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+    # maxmemory 需低於容器 Limit；預設 noeviction：記憶體滿時拒絕寫入，不會淘汰既有資料
     command: >
-      sh -c 'redis-server --requirepass "$(cat /run/secrets/redis_password)"'
+      sh -c 'exec redis-server --requirepass "$$(cat /run/secrets/redis_password)" --maxmemory ${REDIS_MAXMEMORY:-64mb}'
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /run/secrets/redis_password)\" redis-cli --raw PING | grep -qx PONG"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,13 +32,19 @@ services:
   redisinsight:
     image: redis/redisinsight:${REDIS_INSIGHT_TAG}
     container_name: redisinsight
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${REDISINSIGHT_MEM_LIMIT:-256M}
+    memswap_limit: ${REDISINSIGHT_MEM_LIMIT:-256M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     networks:
       - shared_net
     ports:
-      - "${REDIS_INSIGHT_PORT}:5540"
+      - "${BIND_ADDR:-127.0.0.1}:${REDIS_INSIGHT_PORT}:5540"
     volumes:
       - ./volumes/insight:/data
     healthcheck:
@@ -48,6 +57,12 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter:${REDIS_EXPORTER_TAG}
     container_name: redis-exporter
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: ${REDIS_EXPORTER_MEM_LIMIT:-32M}
+    memswap_limit: ${REDIS_EXPORTER_MEM_LIMIT:-32M}
     environment:
       - REDIS_PASSWORD=${COMMON_PASSWORD}
     command: ["--redis.addr=redis:6379"]
@@ -59,11 +74,12 @@ services:
     networks:
       - shared_net
     ports:
-      - "${REDIS_EXPORTER_PORT}:9121"
+      - "${BIND_ADDR:-127.0.0.1}:${REDIS_EXPORTER_PORT}:9121"
     secrets:
       - redis_password
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
 
 

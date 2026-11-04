@@ -2,19 +2,54 @@ services:
   dozzle:
     image: amir20/dozzle:${DOZZLE_TAG}
     container_name: dozzle
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: ${DOZZLE_MEM_LIMIT:-64M}
+    memswap_limit: ${DOZZLE_MEM_LIMIT:-64M}
     restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      dozzle-socket-proxy:
+        condition: service_started
     ports:
-      - "${DOZZLE_PORT}:8080"
+      - "${BIND_ADDR:-127.0.0.1}:${DOZZLE_PORT}:8080"
     security_opt:
       - no-new-privileges:true
     environment:
       DOZZLE_LEVEL: info
+      # 不直接掛載 docker.sock，改經由只開放讀取 API 的 Proxy
+      DOCKER_HOST: tcp://dozzle-socket-proxy:2375
     networks:
       - shared_net
+      - docker_api
+
+  # 只有 Dozzle 連得到；只允許讀取容器清單、Log 與事件，拒絕所有寫入操作 (POST=0)
+  dozzle-socket-proxy:
+    image: tecnativa/docker-socket-proxy:${DOCKER_SOCKET_PROXY_TAG:-v0.5.0}
+    container_name: dozzle-socket-proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: ${DOCKER_SOCKET_PROXY_MEM_LIMIT:-32M}
+    memswap_limit: ${DOCKER_SOCKET_PROXY_MEM_LIMIT:-32M}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: 1
+      INFO: 1
+      EVENTS: 1
+      POST: 0
+      # 只在內部網路使用，不監聽 IPv6；主機停用 IPv6 時 HAProxy 才能啟動
+      DISABLE_IPV6: 1
+    networks:
+      - docker_api
 
 networks:
   shared_net:
     external: true
     name: ${COMPOSE_PROJECT_NAME}_shared_net
+  docker_api:
+    internal: true

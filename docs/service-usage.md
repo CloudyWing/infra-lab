@@ -97,10 +97,16 @@
 ## 4. 帳密與安全建議
 
 - 請勿將 `.env` 與 `secrets/` 內容提交到版本控制。
+- **對外 Port 預設只綁定 `127.0.0.1`**（`.env` 的 `BIND_ADDR`），區網其他機器無法連線。多數服務共用同一組密碼，Dozzle、Mailpit、SearXNG 等介面沒有驗證，RedisInsight、Uptime Kuma 由第一個連上的人建立管理帳號，因此不建議改成 `0.0.0.0`。若確實需要，`task doctor` 會提出警告。
+- 在 Linux 上，Docker 發佈的 Port 會繞過 `ufw` / `firewalld`，主機防火牆無法阻擋，請以 `BIND_ADDR` 控制。
+- **Dozzle 不直接掛載 `docker.sock`**，而是透過 `dozzle-socket-proxy`。Proxy 只開放讀取容器清單、Log 與事件，拒絕所有寫入操作，且只有 Dozzle 連得到。
+- **VS Code 編輯容器 (`vscode-editor`)** 以 root 執行，才能編輯其他服務 UID 擁有的 Volume 檔案；只保留 `CHOWN`、`DAC_OVERRIDE`、`FOWNER` 三個 Capability，並禁止提權。不支援在容器內 `apt install`。
+- `task backup` 產生的備份目錄只有擁有者可讀取，且不包含明文密碼的 `rabbitmq.conf` 與 Mosquitto `passwd`（還原後執行 `task init` 即可重建）。
 - 若要更換共用密碼：
   1. 修改 `.env` 的 `COMMON_PASSWORD`
   2. 更新 `secrets/common_password.txt`
   3. `task down && task up`
+  > 這只會更新設定，**不會**更新已寫入 Volume 的帳密。SQL Server `sa`、Elasticsearch `elastic`、Keycloak、Seq、RabbitMQ、Uptime Kuma 的既有帳密，需要在各服務內另外修改，或清除該服務的資料後重新初始化。
 - 變更後若服務仍登入失敗，先 `task restart SERVICE=<service-name>` 再測試。
 - 若遇到服務資料卷權限錯誤（例如 RabbitMQ/Mosquitto/SQL Server 啟動異常），先執行：
   - `docker compose run --rm init-permissions`

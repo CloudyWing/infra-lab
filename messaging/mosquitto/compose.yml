@@ -2,6 +2,12 @@ services:
   mosquitto:
     image: eclipse-mosquitto:${MOSQUITTO_TAG}
     container_name: mosquitto
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: ${MOSQUITTO_MEM_LIMIT:-32M}
+    memswap_limit: ${MOSQUITTO_MEM_LIMIT:-32M}
     depends_on:
       init-permissions:
         condition: service_completed_successfully
@@ -11,8 +17,8 @@ services:
     networks:
       - shared_net
     ports:
-      - "${MOSQUITTO_PORT}:1883"
-      - "${MOSQUITTO_WEB_PORT}:9002"
+      - "${BIND_ADDR:-127.0.0.1}:${MOSQUITTO_PORT}:1883"
+      - "${BIND_ADDR:-127.0.0.1}:${MOSQUITTO_WEB_PORT}:9002"
     volumes:
       - ./volumes/config:/mosquitto/config
       - ./volumes/data:/mosquitto/data

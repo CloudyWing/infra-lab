@@ -2,6 +2,12 @@ services:
   seq:
     image: datalust/seq:${SEQ_TAG}
     container_name: seq
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: ${SEQ_MEM_LIMIT:-768M}
+    memswap_limit: ${SEQ_MEM_LIMIT:-768M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
@@ -16,8 +22,8 @@ services:
     networks:
       - shared_net
     ports:
-      - "${SEQ_WEB_PORT}:80"
-      - "${SEQ_INGEST_PORT}:5341"
+      - "${BIND_ADDR:-127.0.0.1}:${SEQ_WEB_PORT}:80"
+      - "${BIND_ADDR:-127.0.0.1}:${SEQ_INGEST_PORT}:5341"
 
 networks:
   shared_net:

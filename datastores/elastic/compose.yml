@@ -2,6 +2,12 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
     container_name: elasticsearch
+    deploy:
+      resources:
+        limits:
+          cpus: '1.50'
+          memory: ${ES_MEM_LIMIT:-1536M}
+    memswap_limit: ${ES_MEM_LIMIT:-1536M}
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -12,7 +18,7 @@ services:
       - node.name=elasticsearch
       - cluster.name=${CLUSTER_NAME}
       - discovery.type=single-node
-      - ELASTIC_PASSWORD=${COMMON_PASSWORD}
+      - ELASTIC_PASSWORD_FILE=/run/secrets/elastic_password
       - bootstrap.memory_lock=true
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
@@ -26,11 +32,9 @@ services:
     networks:
       - shared_net
     ports:
-      - "${ES_PORT}:9200"
-    deploy:
-      resources:
-        limits:
-          memory: 2G
+      - "${BIND_ADDR:-127.0.0.1}:${ES_PORT}:9200"
+    security_opt:
+      - no-new-privileges:true
     ulimits:
       memlock:
         soft: -1
@@ -45,12 +49,20 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}
     container_name: kibana
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: ${KIBANA_MEM_LIMIT:-1024M}
+    memswap_limit: ${KIBANA_MEM_LIMIT:-1024M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     depends_on:
       elasticsearch:
         condition: service_healthy
+      setup:
+        condition: service_completed_successfully
     environment:
       - SERVER_NAME=kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
@@ -61,11 +73,7 @@ services:
     networks:
       - shared_net
     ports:
-      - "${KIBANA_PORT}:5601"
-    deploy:
-      resources:
-        limits:
-          memory: 1G
+      - "${BIND_ADDR:-127.0.0.1}:${KIBANA_PORT}:5601"
     healthcheck:
       test: ["CMD-SHELL", "curl -s -I http://127.0.0.1:5601 | grep -q 'HTTP/1.1 302 Found'"]
       interval: 30s
@@ -76,23 +84,38 @@ services:
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
     container_name: elastic_setup
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${ELASTIC_SETUP_MEM_LIMIT:-64M}
+    memswap_limit: ${ELASTIC_SETUP_MEM_LIMIT:-64M}
     user: "0"
     networks:
       - shared_net
     secrets:
       - elastic_password
       - kibana_password
-    command: >
-      bash -c '
-        echo "Waiting for Elasticsearch...";
-        until curl -s -u elastic:$(cat /run/secrets/elastic_password) http://elasticsearch:9200/_cluster/health?pretty | grep -qE "yellow|green"; do
-          echo "Elasticsearch is unavailable - sleeping";
-          sleep 10;
-        done;
-        echo "Setting kibana_system password...";
-        curl -s -X POST -u elastic:$(cat /run/secrets/elastic_password) -H "Content-Type: application/json"           http://elasticsearch:9200/_security/user/kibana_system/_password           -d "{\"password\":\"$(cat /run/secrets/kibana_password)\"}";
-        echo "Done!";
-      '
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - bash
+      - -c
+      - |
+        set -eu
+        ELASTIC_PASS="$$(cat /run/secrets/elastic_password)"
+        KIBANA_PASS="$$(cat /run/secrets/kibana_password)"
+        echo "Waiting for Elasticsearch..."
+        until curl -sf -u "elastic:$$ELASTIC_PASS" http://elasticsearch:9200/_cluster/health | grep -qE '"status":"(yellow|green)"'; do
+          echo "Elasticsearch is unavailable - sleeping"
+          sleep 5
+        done
+        echo "Setting kibana_system password..."
+        # 密碼經由 stdin 傳給 curl，不出現在命令列；HTTP 非 2xx 時 -f 會讓 Setup 以非 0 結束
+        printf '{"password":"%s"}' "$$KIBANA_PASS" | curl -sf -o /dev/null \
+          -X POST -u "elastic:$$ELASTIC_PASS" -H "Content-Type: application/json" \
+          --data-binary @- http://elasticsearch:9200/_security/user/kibana_system/_password
+        echo "Done!"
     depends_on:
       elasticsearch:
         condition: service_healthy

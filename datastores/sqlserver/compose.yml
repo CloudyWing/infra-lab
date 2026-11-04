@@ -2,6 +2,12 @@ services:
   sql-server:
     image: mcr.microsoft.com/mssql/server:${MSSQL_TAG}
     container_name: sql-server
+    deploy:
+      resources:
+        limits:
+          cpus: '2.00'
+          memory: ${SQL_MEM_LIMIT:-2048M}
+    memswap_limit: ${SQL_MEM_LIMIT:-2048M}
     depends_on:
       init-permissions:
         condition: service_completed_successfully
@@ -11,12 +17,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    cap_add:
-      - SYS_PTRACE
+    security_opt:
+      - no-new-privileges:true
     networks:
       - shared_net
     ports:
-      - "${MSSQL_PORT}:1433"
+      - "${BIND_ADDR:-127.0.0.1}:${MSSQL_PORT}:1433"
     volumes:
       - ./volumes/data:/var/opt/mssql/data
       - ./volumes/log:/var/opt/mssql/log
@@ -25,12 +31,9 @@ services:
       - ACCEPT_EULA=Y
       - TZ=${TZ}
       - MSSQL_SA_PASSWORD=${COMMON_PASSWORD}
-    deploy:
-      resources:
-        limits:
-          memory: 2G
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S 127.0.0.1 -U sa -P ${COMMON_PASSWORD} -C -Q 'SELECT 1'"]
+      # 密碼從容器內的環境變數帶入，不寫進 Healthcheck 定義與命令列
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S 127.0.0.1 -U sa -C -Q 'SELECT 1' -b -o /dev/null"]
       interval: 30s
       timeout: 10s
       retries: 3

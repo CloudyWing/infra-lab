@@ -2,13 +2,19 @@ services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:${AZURITE_TAG}
     container_name: azurite
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${AZURITE_MEM_LIMIT:-192M}
+    memswap_limit: ${AZURITE_MEM_LIMIT:-192M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     ports:
-      - "${AZURITE_BLOB_PORT}:10000"
-      - "${AZURITE_QUEUE_PORT}:10001"
-      - "${AZURITE_TABLE_PORT}:10002"
+      - "${BIND_ADDR:-127.0.0.1}:${AZURITE_BLOB_PORT}:10000"
+      - "${BIND_ADDR:-127.0.0.1}:${AZURITE_QUEUE_PORT}:10001"
+      - "${BIND_ADDR:-127.0.0.1}:${AZURITE_TABLE_PORT}:10002"
     command: "azurite --skipApiVersionCheck --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
     volumes:
       - ./volumes/data:/data

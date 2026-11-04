@@ -2,11 +2,17 @@ services:
   uptime-kuma:
     image: louislam/uptime-kuma:${UPTIME_KUMA_TAG}
     container_name: uptime-kuma
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${UPTIME_KUMA_MEM_LIMIT:-256M}
+    memswap_limit: ${UPTIME_KUMA_MEM_LIMIT:-256M}
     restart: unless-stopped
     volumes:
       - uptime-kuma-data:/app/data
     ports:
-      - "${UPTIME_KUMA_PORT}:3001"
+      - "${BIND_ADDR:-127.0.0.1}:${UPTIME_KUMA_PORT}:3001"
     security_opt:
       - no-new-privileges:true
     networks:

@@ -2,13 +2,19 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:${KEYCLOAK_TAG}
     container_name: keycloak
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: ${KEYCLOAK_MEM_LIMIT:-1360M}
+    memswap_limit: ${KEYCLOAK_MEM_LIMIT:-1360M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     networks:
       - shared_net
     ports:
-      - "${KEYCLOAK_PORT}:8080"
+      - "${BIND_ADDR:-127.0.0.1}:${KEYCLOAK_PORT}:8080"
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${COMMON_PASSWORD}

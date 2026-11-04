@@ -14,7 +14,14 @@ setup_logging
 BACKUP_DIR="./backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 TARGET_DIR="$BACKUP_DIR/$TIMESTAMP"
+# 備份含資料庫內容，只允許擁有者讀取
+umask 077
 mkdir -p "$TARGET_DIR"
+chmod 700 "$BACKUP_DIR" 2>/dev/null || true
+
+# 密碼以環境變數傳入容器 (docker exec -e VAR)，避免出現在主機的 Process List
+export SQLCMDPASSWORD="$COMMON_PASSWORD"
+export REDISCLI_AUTH="$COMMON_PASSWORD"
 
 print_header "BACKUP START"
 log_info "Start Time: $(date +"%Y-%m-%d %H:%M:%S")"
@@ -27,8 +34,8 @@ if docker ps --format '{{.Names}}' | grep -q "^sql-server$"; then
     log_info "Snapshotting SQL Server..."
 
     # 取得資料庫清單（排除系統庫：master, tempdb, model, msdb）
-    dbs=$(docker exec sql-server /opt/mssql-tools18/bin/sqlcmd \
-        -S 127.0.0.1 -U sa -P "$COMMON_PASSWORD" -C -h -1 -W \
+    dbs=$(docker exec -e SQLCMDPASSWORD sql-server /opt/mssql-tools18/bin/sqlcmd \
+        -S 127.0.0.1 -U sa -C -h -1 -W \
         -Q "SET NOCOUNT ON; SELECT name FROM sys.databases WHERE name NOT IN ('master','tempdb','model','msdb')" | tr -d '\r')
 
     for db in $dbs; do
@@ -39,8 +46,8 @@ if docker ps --format '{{.Names}}' | grep -q "^sql-server$"; then
         CONTAINER_BAK_PATH="/var/opt/mssql/backup/$BAK_FILE"
 
         # 執行備份 (使用 COPY_ONLY 以免破壞現有備份計畫)
-        docker exec sql-server /opt/mssql-tools18/bin/sqlcmd \
-            -S 127.0.0.1 -U sa -P "$COMMON_PASSWORD" -C \
+        docker exec -e SQLCMDPASSWORD sql-server /opt/mssql-tools18/bin/sqlcmd \
+            -S 127.0.0.1 -U sa -C \
             -Q "BACKUP DATABASE [$db] TO DISK = '$CONTAINER_BAK_PATH' WITH COPY_ONLY, STATS = 10" >/dev/null
 
         if docker cp "sql-server:$CONTAINER_BAK_PATH" "$TARGET_DIR/" 2>/dev/null; then
@@ -62,7 +69,7 @@ if docker ps --format '{{.Names}}' | grep -q "^redis$"; then
     log_info "Snapshotting Redis..."
 
     # 穩定路徑：容器內 SAVE 後，直接 docker cp 取回 dump.rdb
-    if docker exec redis redis-cli --no-auth-warning -a "$COMMON_PASSWORD" SAVE >/dev/null 2>&1 \
+    if docker exec -e REDISCLI_AUTH redis redis-cli SAVE >/dev/null 2>&1 \
         && docker cp "redis:/data/dump.rdb" "$TARGET_DIR/redis_dump.rdb" >/dev/null 2>&1; then
         log_info "    [OK] Redis dump collected."
     else
@@ -80,6 +87,8 @@ log_info "Creating volume tarball..."
 if docker run --rm -v "$SCRIPT_DIR:/workspace" -w /workspace alpine \
     tar -czf "$TARGET_DIR/volumes.tar.gz" \
     --exclude='*/compose.yml' --exclude='*.env' \
+    --exclude='messaging/rabbitmq/volumes/config/rabbitmq.conf' \
+    --exclude='messaging/mosquitto/volumes/config/passwd' \
     datastores messaging services tools setup observability 2>/dev/null; then
     # 將容器 root 產生的檔案 ownership 還給目前使用者
     docker run --rm -v "$SCRIPT_DIR:/workspace" -w /workspace alpine \
@@ -99,6 +108,7 @@ ls -d "$BACKUP_DIR"/*/ 2>/dev/null | sort -r | tail -n +6 | xargs rm -rf 2>/dev/
 
 # 修正擁有權（確保目前使用者可讀取 Docker 產出的檔案）
 chown -R "$(id -u):$(id -g)" "$TARGET_DIR" 2>/dev/null || true
+chmod -R go-rwx "$TARGET_DIR" 2>/dev/null || true
 
 log_info "Backup contents:"
 ls -lh "$TARGET_DIR"

@@ -2,14 +2,20 @@ services:
   mailpit:
     image: axllent/mailpit:${MAILPIT_TAG}
     container_name: mailpit
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: ${MAILPIT_MEM_LIMIT:-64M}
+    memswap_limit: ${MAILPIT_MEM_LIMIT:-64M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     networks:
       - shared_net
     ports:
-      - "${MAILPIT_WEB_PORT}:8025"
-      - "${MAILPIT_SMTP_PORT}:1025"
+      - "${BIND_ADDR:-127.0.0.1}:${MAILPIT_WEB_PORT}:8025"
+      - "${BIND_ADDR:-127.0.0.1}:${MAILPIT_SMTP_PORT}:1025"
     environment:
       MP_MAX_MESSAGES: 5000
     healthcheck:

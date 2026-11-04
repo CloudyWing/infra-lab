@@ -2,13 +2,19 @@ services:
   searxng:
     image: searxng/searxng:${SEARXNG_TAG}
     container_name: searxng
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${SEARXNG_MEM_LIMIT:-256M}
+    memswap_limit: ${SEARXNG_MEM_LIMIT:-256M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
     networks:
       - shared_net
     ports:
-      - "${SEARXNG_PORT}:8080"
+      - "${BIND_ADDR:-127.0.0.1}:${SEARXNG_PORT}:8080"
     volumes:
       - ./volumes/searxng:/etc/searxng
     tmpfs:

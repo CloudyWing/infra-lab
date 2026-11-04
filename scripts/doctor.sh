@@ -297,6 +297,28 @@ check_dir_writable "secrets"
 
 check_runtime_permissions
 
+# 全部常駐服務的 Memory Limit 總額 vs Docker 可用記憶體 (WSL2 預設只分配主機 50%)
+if [ -f ".env" ] && docker ps >/dev/null 2>&1; then
+    if bash scripts/lab.sh mem all >/dev/null 2>&1; then
+        pass "Total memory limit of all services fits Docker available memory"
+    else
+        warn "Total memory limit of all services exceeds Docker available memory (see: task lab:mem)"
+    fi
+fi
+
+# 對外 Port 綁定位址
+if [ -f ".env" ]; then
+    bind_addr="$(grep -E '^BIND_ADDR=' .env | tail -1 | cut -d= -f2- | tr -d '"\r')"
+    case "${bind_addr:-127.0.0.1}" in
+        127.0.0.1|localhost)
+            pass "Ports are bound to localhost only (BIND_ADDR=${bind_addr:-127.0.0.1})"
+            ;;
+        *)
+            warn "Ports are exposed on BIND_ADDR=$bind_addr; services share one password and some UIs have no auth"
+            ;;
+    esac
+fi
+
 if [ "$FAILURES" -eq 0 ]; then
     log_done "Doctor check passed with $WARNINGS warning(s)."
     exit 0

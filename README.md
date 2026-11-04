@@ -72,7 +72,9 @@ task ps
 
 詳細指令說明請參閱 **[指令速查 (Commands)]()**。常用範例：
 
-- `task logs`：查看日誌
+- `task compose-logs`：查看日誌
+- `task lab:api`：只啟動 .NET API 需要的服務（SQL Server、Redis、RabbitMQ、Mailpit）
+- `task lab:list`：列出可用的服務群組與組合
 - `task backup`：執行備份
 - `task clean`：清理容器與孤立資源
 

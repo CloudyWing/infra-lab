@@ -2,6 +2,12 @@ services:
   init-permissions:
     image: alpine:${INIT_PERMISSIONS_TAG}
     container_name: init-permissions
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: ${INIT_PERMISSIONS_MEM_LIMIT:-32M}
+    memswap_limit: ${INIT_PERMISSIONS_MEM_LIMIT:-32M}
     read_only: true
     security_opt:
       - no-new-privileges:true

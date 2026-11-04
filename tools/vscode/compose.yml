@@ -2,9 +2,24 @@ services:
   vscode-editor:
     image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
     container_name: vscode-editor
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: ${VSCODE_MEM_LIMIT:-1024M}
+    memswap_limit: ${VSCODE_MEM_LIMIT:-1024M}
     hostname: dev-box
     command: sleep infinity
+    # 需以 root 編輯其他服務 UID 擁有的 Volume 檔案；只保留檔案權限相關的 Capability
     user: root
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
     networks:
       - shared_net

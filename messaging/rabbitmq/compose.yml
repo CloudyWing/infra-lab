@@ -2,14 +2,23 @@ services:
   rabbitmq:
     image: rabbitmq:${RABBITMQ_TAG}
     container_name: rabbitmq
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: ${RABBITMQ_MEM_LIMIT:-512M}
+    memswap_limit: ${RABBITMQ_MEM_LIMIT:-512M}
     extends:
       file: ../../policies/base.yml
       service: default-policy
+    depends_on:
+      init-permissions:
+        condition: service_completed_successfully
     networks:
       - shared_net
     ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_MGMT_PORT}:15672"
+      - "${BIND_ADDR:-127.0.0.1}:${RABBITMQ_PORT}:5672"
+      - "${BIND_ADDR:-127.0.0.1}:${RABBITMQ_MGMT_PORT}:15672"
     volumes:
       - ./volumes/data:/var/lib/rabbitmq
       - ./volumes/config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
