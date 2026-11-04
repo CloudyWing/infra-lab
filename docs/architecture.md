@@ -2,6 +2,10 @@
 
 ## 基礎設施元件 (Infrastructure Components)
 
+- **Docker Compose**: 根目錄 `compose.yml` 以 `include` 載入各分類目錄下的 `compose.yml`。
+- **共用政策**: 服務透過 `extends` 套用 `policies/base.yml` 的 `default-policy`（`restart: unless-stopped`、Log 大小上限、`no-new-privileges`、時區）。
+- **Taskfile**: 所有操作的入口；服務群組與組合定義在 `scripts/lab.sh`。
+
 ## 服務清單 (Service List)
 
 ### 基礎設定 (Setup - Foundations)
@@ -17,6 +21,7 @@
 | **Seq** | 5340/5341 | 結構化日誌伺服器 (Web/Ingest)。 |
 | **Uptime Kuma** | 3001 | 服務監控與警報。 |
 | **Dozzle** | 8280 | 容器日誌檢視器。 |
+| **Dozzle Socket Proxy** | N/A | Dozzle 專用的 Docker API Proxy，只開放讀取容器清單、Log 與事件。 |
 
 ### 核心資料儲存 (Datastores)
 
@@ -50,10 +55,14 @@
 | ---- | ---- | ---- |
 | **Mailpit** | 1025/8025 | Email 測試工具 (SMTP/Web)。 |
 | **VS Code Editor** | N/A | Dev Container (Port-less, mounted)。 |
+| **InfraLab MCP Server** | N/A | 供 MCP Client 查詢與啟停服務；在 WSL 以 stdio 執行，不是容器。見 `docs/mcp.md`。 |
 
 ## 安全與網路 (Security & Network)
 
 - **網路**: `${COMPOSE_PROJECT_NAME}_shared_net` (Bridge 模式)
+- **Docker API 網路**: Dozzle 與 Socket Proxy 另外使用 `internal: true` 的 `docker_api` 網路，其他服務連不到 Proxy。
+- **對外 Port**: 綁定 `.env` 的 `BIND_ADDR`，預設 `127.0.0.1`，只允許本機存取。
+- **資源限制**: 每個服務都有 CPU 與 Memory Limit，Memory 由 `.env` 的 `*_MEM_LIMIT` 設定，說明見 `docs/commands.md` 第 5 節。
 - **機密資訊 (Secrets)**: 透過檔案掛載 (`secrets/`) 與 `.env` 管理。
 - **User IDs**: 固定 UID (例如 MSSQL 使用 10001) 以確保權限一致性。
 - **Init Permissions**: 使用 `setup/init-permissions` 容器自動修正跨平台權限問題。
@@ -99,9 +108,12 @@
 ```text
 infra-lab/
 ├── .env                # 設定變數
+├── .mcp.json           # Claude Code 的 MCP Server 設定
 ├── Taskfile.yml        # 自動化指令
 ├── compose.yml         # 核心 Docker Compose 定義檔
-├── scripts/            # 工具腳本 (init, backup, cleanup)
+├── policies/           # 共用 Compose 政策 (base.yml)
+├── scripts/            # 工具腳本 (init, doctor, backup, cleanup, lab, mcp)
+│   └── templates/      # 設定檔模板 (Mosquitto, RabbitMQ)
 ├── docs/               # 專案文件
 ├── secrets/            # 機密檔案 (Git-ignored)
 ├── logs/               # 操作日誌 (Git-ignored)
@@ -111,5 +123,5 @@ infra-lab/
 ├── datastores/         # [核心] 資料庫服務 (SQL, Redis, Elastic, Azurite)
 ├── messaging/          # [核心] 訊息佇列 (RabbitMQ, Mosquitto)
 ├── services/           # [應用] 應用服務 (Keycloak, SearXNG)
-└── tools/              # [工具] 開發工具 (Mailpit, VSCode)
+└── tools/              # [工具] 開發工具 (Mailpit, VSCode, MCP Server)
 ```

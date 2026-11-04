@@ -24,7 +24,7 @@
 
 ### 2. Port 衝突 (Port Conflicts)
 
-- **徵狀：** `Error starting userland proxy: listen tcp4 0.0.0.0:1433: bind: address already in use`
+- **徵狀：** `Error starting userland proxy: listen tcp4 127.0.0.1:1433: bind: address already in use`
 - **原因：** 該 Port 已被其他服務 (或本機執行個體) 佔用。
 - **解決方案：**
   1. 停止本機服務 (例如本機 SQL Server)。

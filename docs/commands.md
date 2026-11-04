@@ -12,7 +12,7 @@
 | `task init` | **初始化環境 (Initialize Environment)** | 建立目錄、網路與機密檔案。**請最先執行此指令。** |
 | `task bootstrap` | **新電腦佈置 (Bootstrap)** | 依序執行 `init`、`doctor`、`mcp:build`、`mcp:config`，不啟動任何服務；見 [MCP Server](mcp.md#6-新電腦佈置)。 |
 | `task up` | **啟動服務 (Start Services)** | 啟動所有定義的服務。可指定 `SERVICE=name`（或 `S=name`）啟動特定服務。 |
-| `task down` | **停止服務 (Stop Services)** | 停止全部服務；可指定 `SERVICE=name`（或 `S=name`）僅停止單一服務。 |
+| `task down` | **停止服務 (Stop Services)** | 停止並移除全部容器（保留資料 Volume）；可指定 `SERVICE=name`（或 `S=name`）僅停止單一服務，不移除容器。 |
 | `task restart` | **重啟服務 (Restart Services)** | 重啟全部服務；可指定 `SERVICE=name`（或 `S=name`）僅重啟單一服務。 |
 
 ## 2. 維護操作 (Maintenance)
@@ -58,7 +58,7 @@
 
 ### 4.2 群組
 
-| 群組 | 服務 | 最小記憶體 |
+| 群組 | 服務 | Memory Limit |
 | --- | --- | ---: |
 | `sql` | SQL Server | 2048 MiB |
 | `cache` | Redis | 128 MiB |
@@ -106,24 +106,9 @@ task lab:stop
 
 ## 5. 記憶體配置 (Memory Limits)
 
-每個服務的 Memory Limit 都在 `.env` 以 `*_MEM_LIMIT` 設定，預設值的依據見 5.1。負載較高時直接調高 `.env` 的數值即可，不需修改 `compose.yml`。
+每個服務的 Memory Limit 都在 `.env` 以 `*_MEM_LIMIT` 設定。負載較高時直接調高 `.env` 的數值即可，不需修改 `compose.yml`。
 
 - `memswap_limit` 與 Memory Limit 相同，記憶體不足時會被 OOM Kill，而不是改用 Swap 默默變慢。
 - WSL2 預設只分配主機 50% 的記憶體給 Docker。若 `task lab:mem` 顯示總額超過 Docker 可用記憶體，請調高 `%UserProfile%\.wslconfig` 的 `memory=`，或降低 `.env` 的數值。
 - `task doctor` 會檢查全部服務的 Limit 總額是否超過 Docker 可用記憶體。
 - RabbitMQ 在容器內不一定偵測得到記憶體限制，`task init` 會把 `RABBITMQ_MEM_LIMIT` 寫入 `rabbitmq.conf`。修改此值後需重新執行 `task init` 並重啟 RabbitMQ，`task doctor` 會檢查兩者是否一致。
-
-### 5.1 預設值依據
-
-有官方最低規格的服務依官方規格設定；官方只提供正式環境規格、或沒有公布規格的服務，採本機低負載的最小值。官方文件查閱日期：2026-11-04。
-
-| 服務 | 預設 Limit | 官方規格 | 依據 |
-| --- | ---: | --- | --- |
-| SQL Server | 2048 MiB | 最低 2 GB | [Microsoft Learn](https://learn.microsoft.com/en-us/sql/linux/install-upgrade/setup?view=sql-server-ver17#system-requirements) |
-| Keycloak | 1360 MiB | 基本用量 1250 MB，Limit 範例 1360 MB | [Keycloak Sizing](https://www.keycloak.org/high-availability/multi-cluster/concepts-memory-and-cpu-sizing) |
-| VS Code 編輯容器 | 1024 MiB | 最低 1 GB，建議 2 GB | [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers#_system-requirements) |
-| Elasticsearch | 1536 MiB | 無最低規格；Heap 不超過容器記憶體 50%，官方 Docker 範例使用 `-m 1GB`。實測 1 GB 用量達 98%，調為 1536 MiB，Heap 維持 512 MB | [JVM settings](https://www.elastic.co/docs/reference/elasticsearch/jvm-settings)、[Docker](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic) |
-| Kibana | 1024 MiB | 無一般最低規格（2 GB 僅針對付費進階功能） | [Kibana memory](https://www.elastic.co/docs/deploy-manage/production-guidance/kibana-configure-memory) |
-| RabbitMQ | 512 MiB | 正式環境 4 GiB；節點需隨時保留至少 256 MiB 可用 | [Production Checklist](https://www.rabbitmq.com/docs/production-checklist) |
-| Seq | 768 MiB | 輕量負載 3.5 GB（以 Windows 主機為例） | [Seq System Requirements](https://datalust.co/docs/system-requirements) |
-| 其他服務 | 32–256 MiB | 無官方規格 | Redis、RedisInsight、Azurite、Mosquitto、SearXNG、Uptime Kuma、Dozzle、Mailpit、docker-socket-proxy |

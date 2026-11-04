@@ -58,7 +58,7 @@
 ### Redis / RedisInsight
 
 1. 開啟 http://localhost:5540。
-2. 新增資料庫連線：Host `redis`（容器內）或 `localhost`（主機端），Port `6379`。
+2. 新增資料庫連線：Host `redis`，Port `6379`。RedisInsight 在容器內執行，與 Redis 同在 `shared_net`，填 `localhost` 會指向 RedisInsight 容器本身而連不上。
 3. 勾選 Authentication 並填入 `COMMON_PASSWORD`。
 
 ### Elasticsearch / Kibana
@@ -97,11 +97,11 @@
 ## 4. 帳密與安全建議
 
 - 請勿將 `.env` 與 `secrets/` 內容提交到版本控制。
-- **對外 Port 預設只綁定 `127.0.0.1`**（`.env` 的 `BIND_ADDR`），區網其他機器無法連線。多數服務共用同一組密碼，Dozzle、Mailpit、SearXNG 等介面沒有驗證，RedisInsight、Uptime Kuma 由第一個連上的人建立管理帳號，因此不建議改成 `0.0.0.0`。若確實需要，`task doctor` 會提出警告。
-- 在 Linux 上，Docker 發佈的 Port 會繞過 `ufw` / `firewalld`，主機防火牆無法阻擋，請以 `BIND_ADDR` 控制。
+- **對外 Port 預設只綁定 `127.0.0.1`**（`.env` 的 `BIND_ADDR`），區網其他機器無法連線。多數服務共用同一組密碼，Dozzle、Mailpit、SearXNG 等介面沒有驗證，Uptime Kuma 由第一個連上的人建立管理帳號，因此不建議改成 `0.0.0.0`。若確實需要，`task doctor` 會提出警告。
+- 在 Linux 上，Docker 發佈的 Port 不受 `ufw` 規則限制，請以 `BIND_ADDR` 控制對外開放範圍。
 - **Dozzle 不直接掛載 `docker.sock`**，而是透過 `dozzle-socket-proxy`。Proxy 只開放讀取容器清單、Log 與事件，拒絕所有寫入操作，且只有 Dozzle 連得到。
-- **VS Code 編輯容器 (`vscode-editor`)** 以 root 執行，才能編輯其他服務 UID 擁有的 Volume 檔案；只保留 `CHOWN`、`DAC_OVERRIDE`、`FOWNER` 三個 Capability，並禁止提權。不支援在容器內 `apt install`。
-- `task backup` 產生的備份目錄只有擁有者可讀取，且不包含明文密碼的 `rabbitmq.conf` 與 Mosquitto `passwd`（還原後執行 `task init` 即可重建）。
+- **VS Code 編輯容器 (`vscode-editor`)** 以 root 執行，才能編輯其他服務 UID 擁有的 Volume 檔案；只保留 `CHOWN`、`DAC_OVERRIDE`、`FOWNER` 三個 Capability，並禁止提權。`apt-get update` 會因 `setgroups` 被拒而失敗，因此無法在容器內安裝映像未內建的套件。
+- `task backup` 產生的備份目錄只有擁有者可讀取，且不包含明文密碼的 `rabbitmq.conf` 與 Mosquitto `passwd`。還原後執行 `task init` 會重建 `rabbitmq.conf`；Mosquitto 的 `passwd` 由容器啟動時的 entrypoint 產生。
 - 若要更換共用密碼：
   1. 修改 `.env` 的 `COMMON_PASSWORD`
   2. 更新 `secrets/common_password.txt`

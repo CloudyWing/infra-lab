@@ -30,7 +30,7 @@
 
 ## 3. 建置
 
-在 WSL（或 Linux / macOS）中執行：
+在 WSL 或 Linux 中執行：
 
 ```bash
 task mcp:build
@@ -40,7 +40,7 @@ task mcp:build
 
 - SDK 映像的 Tag 由 `.env` 的 `DOTNET_SDK_TAG` 指定，預設為 `10.0`。
 - NuGet 套件快取在 `tools/mcp/.nuget`，重複建置不必重新下載。
-- 依 `uname -m` 選擇 `linux-x64` 或 `linux-arm64`。
+- 依 `uname -m` 選擇 `linux-x64` 或 `linux-arm64`。產出的是 Linux 執行檔，macOS 主機無法直接執行。
 
 ## 4. 設定 Client
 

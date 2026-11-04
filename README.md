@@ -16,7 +16,7 @@
 
 - **Linux / WSL**:
   ```bash
-  sh -c "$(curl --location [https://taskfile.dev/install.sh](https://taskfile.dev/install.sh))" -- -d -b /usr/local/bin
+  sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
   ```
 
 - **Windows (Winget)**:
@@ -52,7 +52,7 @@ task up
 
 ```
 
-> **建議**：啟動完成後，請先閱讀 **[服務使用指南 (Service Usage Guide)]()**，內含各服務的 Default 帳密、網址與對應工具。
+> **建議**：啟動完成後，請先閱讀 **[服務使用指南 (Service Usage Guide)](docs/service-usage.md)**，內含各服務的 Default 帳密、網址與對應工具。
 
 若僅需啟動特定服務 (e.g., redis)：
 
@@ -72,7 +72,7 @@ task ps
 
 ### 4. 常用指令 (Commands)
 
-詳細指令說明請參閱 **[指令速查 (Commands)]()**。常用範例：
+詳細指令說明請參閱 **[指令速查 (Commands)](docs/commands.md)**。常用範例：
 
 - `task compose-logs`：查看日誌
 - `task lab:api`：只啟動 .NET API 需要的服務（SQL Server、Redis、RabbitMQ、Mailpit）
@@ -95,17 +95,19 @@ task ps
 
 ## 📚 文件索引 (Documentation)
 
-- **[架構總覽 (Architecture)]()**
+- **[架構總覽 (Architecture)](docs/architecture.md)**
 服務列表、Port 對照與專案目錄結構說明。
-- **[指令速查 (Commands)]()**
+- **[指令速查 (Commands)](docs/commands.md)**
 完整的 Taskfile 指令說明。
-- **[服務使用指南 (Service Usage)]()**
+- **[服務使用指南 (Service Usage)](docs/service-usage.md)**
 服務啟動後的實際操作方式（連接字串、帳號密碼來源）。
-- **[疑難排解 (Troubleshooting)]()**
+- **[疑難排解 (Troubleshooting)](docs/troubleshooting.md)**
 常見錯誤排除與解決方案。
+- **[MCP Server](docs/mcp.md)**
+讓 MCP Client 查詢與啟停服務的設定方式。
 
-> **備註**：本專案文字檔統一使用 LF 換行；若看到 `CRLF will be replaced by LF` 警告，請參閱 [疑難排解第 3 節]()。
+> **備註**：本專案文字檔統一使用 LF 換行；若看到 `CRLF will be replaced by LF` 警告，請參閱 [疑難排解第 3 節](docs/troubleshooting.md#3-跨平台換行符號與腳本限制-cross-platform-eol--script-limits)。
 
 ## 📝 License
 
-This project is MIT [licensed]().
+This project is MIT [licensed](LICENSE.md).
