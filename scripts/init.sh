@@ -132,8 +132,8 @@ if [ ! -f .env ]; then
     if [ -f .env.example ]; then
         log_info "Initializing .env from example..."
         cp .env.example .env
-        # 使用 Perl 替換預設密碼
-        perl -i -pe "s/COMMON_PASSWORD=.*/COMMON_PASSWORD=${DEFAULT_PASSWORD}/" .env
+        # 使用 Perl 替換預設密碼；密碼經由環境變數傳入，避免 @、$ 等字元被 Perl 當成變數展開
+        INIT_PASSWORD="$DEFAULT_PASSWORD" perl -i -pe 's/^COMMON_PASSWORD=.*/COMMON_PASSWORD=$ENV{INIT_PASSWORD}/' .env
         log_ok "Auto-configured .env with default password."
     else
         log_warn ".env.example missing, manual configuration required."
